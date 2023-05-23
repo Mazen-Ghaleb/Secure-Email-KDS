@@ -1,5 +1,5 @@
 import os, random, struct
-from Cryptodome.Cipher import AES
+from Crypto.Cipher import AES
 
 def encrypt_file(key, in_filename, out_filename=None, chunksize=16):
     """ Encrypts a file using AES (CBC mode) with the

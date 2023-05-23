@@ -4,11 +4,19 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
+import socket
+from socket import SHUT_RDWR
+from Crypto.Cipher import AES
+import json
+
+
 class App:
     sender = ""
     password = ""
-    tovar=""
-    
+    reciever = ""
+    kds_ip = "localhost"
+    kds_port = 3000
+
     def __init__(self, root):
         # Setting title
         self.sender=tk.StringVar()
@@ -55,13 +63,13 @@ class App:
         label_Subject["text"] = "Subject:"
         label_Subject.place(x=40,y=190,width=70,height=25)
         
-        self.email=tk.Entry(root, textvariable = self.sender)
-        self.email["borderwidth"] = "1px"
-        self.email["font"] = ft
-        self.email["fg"] = "#333333"
-        self.email["justify"] = "left"
-        self.email["text"] = "Email"
-        self.email.place(x=120,y=40,width=420,height=30)
+        self.email_From=tk.Entry(root, textvariable = self.sender)
+        self.email_From["borderwidth"] = "1px"
+        self.email_From["font"] = ft
+        self.email_From["fg"] = "#333333"
+        self.email_From["justify"] = "left"
+        self.email_From["text"] = "Email"
+        self.email_From.place(x=120,y=40,width=420,height=30)
         
         self.email_password=tk.Entry(root, textvariable = self.password, show="*")
         self.email_password["borderwidth"] = "1px"
@@ -101,6 +109,15 @@ class App:
         button_Send["text"] = "Send"
         button_Send.place(x=470,y=460,width=70,height=25)
         button_Send["command"] = self.button_Send_command
+        
+    def button_Send_command(self):
+        self.sender = self.email_From.get()
+        # self.password = self.email_password.get()
+        self.reciever=self.email_To.get()
+        subject = self.email_Subject.get()
+        body = self.email_Body.get("1.0","end")
+        att="Place holder for the key"
+        self.send_email(subject, body,att, self.reciever)
     
     def send_email(self, subject, body, attach, recipients):
         msg = MIMEMultipart()
@@ -108,33 +125,85 @@ class App:
         msg['From'] = self.sender
         msg['To'] = recipients
         msg.attach(MIMEText("This is dummy email"))
-        part=MIMEApplication(body,Name="RealMessageBody.txt")
-        part['Content-Disposition']='attachment; filename=RealMessageBody.txt'
-        msg.attach(part)
-        
-        part=MIMEApplication("encrypted key goes here",Name="wrappedkey.txt")
-        part['Content-Disposition']='attachment; filename=wrappedkey.txt'
-        msg.attach(part)
+
         smtp_server = smtplib.SMTP("smtp-mail.outlook.com", port=587)
         print("Connected")
         smtp_server.starttls()
-        print("TLS OK")
-        # print(self.sender, self.email_password.get())
-        smtp_server.login(self.sender, self.email_password.get())
-        print("login OK")
-        smtp_server.sendmail(self.sender, recipients, msg.as_string())
-        print("mail sent")
-        smtp_server.quit()
+        print("TLS successful")
         
-    def button_Send_command(self):
-        self.sender = self.email.get()
-        # self.password = self.email_password.get()
-        tovar=self.email_To.get()
-        print(tovar)
-        subject = self.email_Subject.get()
-        body = self.email_Body.get("1.0","end")
-        att="Place holder for the key"
-        self.send_email(subject, body,att, tovar)
+        try:
+            smtp_server.login(self.sender, self.email_password.get())
+            print("Login successful")
+        except Exception as e:
+            print(e)
+            print("Login failed, aborted sending email")
+            return
+        
+        # Get the key from KDS
+        self.getKey_from_kds()
+        
+        with open("users.json", "r", encoding="utf-8") as f:
+            users = json.load(f)
+       
+        self.km_a = users[self.sender]
+        
+        if (self.ks_a and self.ks_b and self.km_a):
+            
+            self.ks = self.decrypt_key(self.ks_a, self.km_a)
+            print(f"ks: {self.ks}")
+            
+            part=MIMEApplication(self.encrypt_message(self.ks, body), Name="RealMessageBody.txt")
+            part['Content-Disposition']='attachment; filename=RealMessageBody.txt'
+            msg.attach(part)
+            
+            part=MIMEApplication(self.ks_b, Name="wrappedkey.txt")
+            part['Content-Disposition']='attachment; filename=wrappedkey.txt'
+            msg.attach(part)
+        
+            smtp_server.sendmail(self.sender, recipients, msg.as_string())
+            print("Mail sent")
+            smtp_server.quit()
+        
+        else:
+            print("Couldn't recieve encryption keys, aborted sending email")
+            return
+    
+    def getKey_from_kds(self):
+        self.connect_to_kds()
+        self.send_request()
+        self.receive_key()
+        # self.disconnect_from_kds()
+    
+    def connect_to_kds(self):
+        self.tcpsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.tcpsock.connect((self.kds_ip,self.kds_port))
+        # self.tcpsock.recv(2048)
+
+    def send_request(self):
+        # Send the sender email and the recevier email
+        self.tcpsock.send(f'{self.sender}\n{self.reciever}\n'.encode())
+
+    def receive_key(self):
+        self.ks_a, self.ks_b = self.tcpsock.recv(2048).decode().split("\n")
+        
+        print(f"ks_a: {self.ks_a}")
+        print(f"ks_b: {self.ks_b}")
+        # self.encrypted_key_with_kmb = self.tcpsock.recv(2048)
+
+    # def disconnect_from_kds(self):
+    #     self.tcpsock.send(b"quit")
+    #     buf = self.tcpsock.recv(2048)
+    #     print(f"Server sent: {buf.decode()}")
+    
+    def encrypt_message(self, key, message):
+        encryptor = AES.new(bytes.fromhex(key), AES.MODE_ECB)
+        encrypted_message = encryptor.encrypt(message.encode())
+        return encrypted_message.decode()
+    
+    def decrypt_key(self, encrypted_key, master_key):
+        decryptor = AES.new(bytes.fromhex(master_key), AES.MODE_ECB)
+        key = decryptor.decrypt(bytes.fromhex(encrypted_key))
+        return key.hex()
         
 if __name__ == "__main__":
     root = tk.Tk()
