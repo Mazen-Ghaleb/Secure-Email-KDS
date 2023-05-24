@@ -15,7 +15,7 @@ class KeyManager:
                 self.users[username] = master_key
             f.close()
         except Exception as e:
-            print("Execption :", e)
+            # print("Execption :", e)
             pass
 
     def save_users(self):
