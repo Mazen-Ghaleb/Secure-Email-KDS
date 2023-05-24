@@ -140,13 +140,21 @@ class App:
         
         # Get the key from KDS
         self.getKey_from_kds()
-        
-        try: 
-            f = open("users.json", "r", encoding="utf-8")
-            users = json.load(f)
+        try:
+            found = False
+            f = open("users.csv", "r")
+            for line in f.readlines():
+                username, master_key = line.strip().split(',')
+                print(f'{username},{master_key}')
+                if username == self.sender:
+                    self.km_a = master_key
+                    found = True
+                    break
             f.close()
-            self.km_a = users[self.sender]
-        except Exception as e:
+            if not found:
+                self.show_alert_box("Couldn't find master key for this email")
+                return
+        except:
              print("Execption :", e)
              self.show_alert_box("Error getting km_a key, aborted sending email")
              return

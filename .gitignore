@@ -402,4 +402,5 @@ FodyWeavers.xsd
 
 # Testing files
 testing.ipynb
+users.csv
 users.json

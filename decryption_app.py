@@ -130,15 +130,25 @@ class App:
             print("Login failed, aborted decryption")
             return False
         
-        try: 
-            f = open("users.json", "r", encoding="utf-8")
-            users = json.load(f)
+        try:
+            f = open("users.csv", "r")
+            found = False
+            for line in f.readlines():
+                username, master_key = line.strip().split(',')
+                print(f'{username},{master_key}')
+                if username == self.reciever:
+                    self.km_b = master_key
+                    found = True
+                    break
             f.close()
-            self.km_b = users[self.reciever]
-        except Exception as e:
-             print(e)
+            if not found:
+                self.show_alert_box("Couldn't find master key for this email")
+                return
+
+        except:
+             print("Execption :", e)
              self.show_alert_box(e)
-             return False
+             return
        
         print(f"km_b: {self.km_b}")
         print(f"ks_b: {self.ks_b}")

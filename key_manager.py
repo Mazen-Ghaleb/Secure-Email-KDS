@@ -4,13 +4,26 @@ import json
 
 class KeyManager:
     def __init__(self):
-        f = open("users.json", "r")
-        self.users = json.load(f)
-        f.close()
+        self.users_file_path = "users.csv"
+        self.users = {}
+        self.load_users()
         
+    def load_users(self):
+        try:
+            f = open(self.users_file_path, "r")
+            for line in f.readlines():
+                username, master_key = line.strip().split(',')
+                self.users[username] = master_key
+            f.close()
+        except:
+            pass
+
     def save_users(self):
-        f = open("users.json", "w")
-        json.dump(self.users, f)
+        lines = []
+        for user in self.users:
+            lines.append(f'{user},{self.users[user]}\n')
+        f = open(self.users_file_path, "w")
+        f.writelines(lines)
         f.close()
     
     def register_user(self, email):
