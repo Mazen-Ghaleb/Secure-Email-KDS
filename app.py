@@ -9,7 +9,7 @@ import socket
 from socket import SHUT_RDWR
 from Crypto.Util.Padding import pad
 from Crypto.Cipher import AES
-import json
+import time
 
 class App:
     kds_ip = "localhost"
@@ -141,22 +141,23 @@ class App:
         # Get the key from KDS
         self.getKey_from_kds()
         try:
+            # Wait 1 second for the kds to write the key to the file
+            time.sleep(1)
             found = False
             f = open("users.csv", "r")
             for line in f.readlines():
                 username, master_key = line.strip().split(',')
-                print(f'{username},{master_key}')
                 if username == self.sender:
                     self.km_a = master_key
                     found = True
                     break
             f.close()
             if not found:
-                self.show_alert_box("Error getting km_a key, aborted sending email")
+                self.show_alert_box("Couldn't find master key for this email, aborted sending email")
                 return
-        except:
+        except Exception as e:
              print("Execption :", e)
-             self.show_alert_box("Error getting km_a key, aborted sending email")
+             self.show_alert_box("Couldn't find master key for this email, aborted sending email")
              return
         
         if (self.ks_a and self.ks_b and self.km_a):

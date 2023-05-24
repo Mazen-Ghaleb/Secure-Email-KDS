@@ -130,12 +130,11 @@ class App:
             print("Login failed, aborted decryption")
             return False
         
-        try:
+        try:            
             f = open("users.csv", "r")
             found = False
             for line in f.readlines():
                 username, master_key = line.strip().split(',')
-                print(f'{username},{master_key}')
                 if username == self.reciever:
                     self.km_b = master_key
                     found = True
@@ -145,7 +144,7 @@ class App:
                 self.show_alert_box("Couldn't find master key for this email")
                 return
 
-        except:
+        except  Exception as e:
              print("Execption :", e)
              self.show_alert_box(e)
              return
@@ -172,7 +171,7 @@ class App:
         except:
             self.show_alert_box("Incorrect master key")
             print("Incorrect master key")
-            return
+            return ""
         decrypted_msg = decrypted_msg.decode()
         print("Decrypted Message:\n" + decrypted_msg)
         return decrypted_msg

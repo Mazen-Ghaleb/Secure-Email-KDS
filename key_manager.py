@@ -1,6 +1,5 @@
 import secrets
 from Crypto.Cipher import AES
-import json
 
 class KeyManager:
     def __init__(self):
@@ -15,7 +14,8 @@ class KeyManager:
                 username, master_key = line.strip().split(',')
                 self.users[username] = master_key
             f.close()
-        except:
+        except Exception as e:
+            print("Execption :", e)
             pass
 
     def save_users(self):
