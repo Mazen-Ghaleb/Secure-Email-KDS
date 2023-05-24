@@ -6,6 +6,7 @@ from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 import socket
 from socket import SHUT_RDWR
+from Crypto.Util.Padding import pad, unpad
 from Crypto.Cipher import AES
 import json
 
@@ -142,9 +143,15 @@ class App:
         # Get the key from KDS
         self.getKey_from_kds()
         
-        with open("users.json", "r", encoding="utf-8") as f:
+        try: 
+            f = open("users.json", "r", encoding="utf-8")
             users = json.load(f)
+            f.close()
+        except Exception as e:
+             print(e)
+             return
        
+        print(users)
         self.km_a = users[self.sender]
         
         if (self.ks_a and self.ks_b and self.km_a):
@@ -172,11 +179,10 @@ class App:
         self.connect_to_kds()
         self.send_request()
         self.receive_key()
-        # self.disconnect_from_kds()
     
     def connect_to_kds(self):
         self.tcpsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.tcpsock.connect((self.kds_ip,self.kds_port))
+        self.tcpsock.connect((self.kds_ip, self.kds_port))
         # self.tcpsock.recv(2048)
 
     def send_request(self):
@@ -188,18 +194,21 @@ class App:
         
         print(f"ks_a: {self.ks_a}")
         print(f"ks_b: {self.ks_b}")
-        # self.encrypted_key_with_kmb = self.tcpsock.recv(2048)
-
-    # def disconnect_from_kds(self):
-    #     self.tcpsock.send(b"quit")
-    #     buf = self.tcpsock.recv(2048)
-    #     print(f"Server sent: {buf.decode()}")
     
-    def encrypt_message(self, key, message):
+    def encrypt_message(self, key, message, chunk_size=16):
         encryptor = AES.new(bytes.fromhex(key), AES.MODE_ECB)
-        encrypted_message = encryptor.encrypt(message.encode())
-        return encrypted_message.decode()
+        message_padded = pad(message.encode(), AES.block_size)
+        encrypted_message = encryptor.encrypt(message_padded)
+        return encrypted_message.hex()
     
+        # temp = len(message) % chunk_size
+        # padding = 0 if temp == 0 else (chunk_size - temp)
+        # message = (message + (' ' * padding))
+        # encrypted_message = ''
+        # message_bytes = (message + '0'*(chunk_size - len(message.encode()) % chunk_size)).encode()
+        # encrypted_message = encryptor.encrypt(message_bytes[:chunk_size])
+        # for i in range(chunk_size, len(message), chunk_size):
+        
     def decrypt_key(self, encrypted_key, master_key):
         decryptor = AES.new(bytes.fromhex(master_key), AES.MODE_ECB)
         key = decryptor.decrypt(bytes.fromhex(encrypted_key))
