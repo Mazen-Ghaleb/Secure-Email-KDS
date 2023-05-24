@@ -13,10 +13,7 @@ class ClientThread(threading.Thread):
         print ("[+] New thread started for ",ip,":",str(port))
     
     def run(self):
-        print ("Connection from : ",ip,":",str(port))
-        
-        # clientsock.send("Welcome to the key distribution multi-threaded server".encode())
-        
+        print ("Connection from : ",ip,":",str(port))        
         data = self.csocket.recv(2048)
         messages = data.decode().split("\n")
         
@@ -35,26 +32,11 @@ class ClientThread(threading.Thread):
         print(f"ks_b: {ks_b}")
         
         self.csocket.send(f'{ks_a}\n{ks_b}'.encode())
-
         self.csocket.close()
-        
         # TODO: Critical section
         key_mgr.save_users()
-        
         print ("Client at ", self.ip," disconnected...")
         
-        # while len(data):
-        #     data = self.csocket.recv(2048)
-        #     print("Client(%s:%s) sent : %s"%(self.ip, str(self.port), data.decode()))
-        #     self.csocket.send(str.encode("You sent me : "+data.decode()))            
-        #     if data.decode()=="quit":
-        #         self.csocket.send(str.encode("Ok Bye Bye"))
-        #         # self.csocket.close()
-        #         data = ""
-        #         break
-            
-        # self.csocket.close()
-        # print ("Client at ", self.ip," disconnected...")
         
 host = "localhost"
 port = 3000

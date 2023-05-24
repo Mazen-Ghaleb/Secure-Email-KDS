@@ -1,28 +1,26 @@
 import tkinter as tk
 import tkinter.font as tkFont
+from tkinter import messagebox
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 import socket
 from socket import SHUT_RDWR
-from Crypto.Util.Padding import pad, unpad
+from Crypto.Util.Padding import pad
 from Crypto.Cipher import AES
 import json
 
-
 class App:
-    sender = ""
-    password = ""
-    reciever = ""
     kds_ip = "localhost"
     kds_port = 3000
 
     def __init__(self, root):
-        # Setting title
         self.sender=tk.StringVar()
-        self.password=tk.StringVar()
+        self.reciever=tk.StringVar()
         self.to_var=tk.StringVar()
+        
+        # Setting title
         root.title("Secure Mail Composer")
         
         # Setting window size
@@ -72,7 +70,7 @@ class App:
         self.email_From["text"] = "Email"
         self.email_From.place(x=120,y=40,width=420,height=30)
         
-        self.email_password=tk.Entry(root, textvariable = self.password, show="*")
+        self.email_password=tk.Entry(root, show="*")
         self.email_password["borderwidth"] = "1px"
         self.email_password["font"] = ft
         self.email_password["fg"] = "#333333"
@@ -113,7 +111,6 @@ class App:
         
     def button_Send_command(self):
         self.sender = self.email_From.get()
-        # self.password = self.email_password.get()
         self.reciever=self.email_To.get()
         subject = self.email_Subject.get()
         body = self.email_Body.get("1.0","end")
@@ -137,6 +134,7 @@ class App:
             print("Login successful")
         except Exception as e:
             print(e)
+            self.show_alert_box("Login failed, aborted sending email")
             print("Login failed, aborted sending email")
             return
         
@@ -147,12 +145,11 @@ class App:
             f = open("users.json", "r", encoding="utf-8")
             users = json.load(f)
             f.close()
+            self.km_a = users[self.sender]
         except Exception as e:
-             print(e)
+             print("Execption :", e)
+             self.show_alert_box("Error getting km_a key, aborted sending email")
              return
-       
-        print(users)
-        self.km_a = users[self.sender]
         
         if (self.ks_a and self.ks_b and self.km_a):
             
@@ -168,10 +165,12 @@ class App:
             msg.attach(part)
         
             smtp_server.sendmail(self.sender, recipients, msg.as_string())
+            self.show_alert_box("Mail was sent successfully")
             print("Mail sent")
             smtp_server.quit()
         
         else:
+            self.show_alert_box("Couldn't recieve encryption keys, aborted sending email")
             print("Couldn't recieve encryption keys, aborted sending email")
             return
     
@@ -183,7 +182,6 @@ class App:
     def connect_to_kds(self):
         self.tcpsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.tcpsock.connect((self.kds_ip, self.kds_port))
-        # self.tcpsock.recv(2048)
 
     def send_request(self):
         # Send the sender email and the recevier email
@@ -200,19 +198,15 @@ class App:
         message_padded = pad(message.encode(), AES.block_size)
         encrypted_message = encryptor.encrypt(message_padded)
         return encrypted_message.hex()
-    
-        # temp = len(message) % chunk_size
-        # padding = 0 if temp == 0 else (chunk_size - temp)
-        # message = (message + (' ' * padding))
-        # encrypted_message = ''
-        # message_bytes = (message + '0'*(chunk_size - len(message.encode()) % chunk_size)).encode()
-        # encrypted_message = encryptor.encrypt(message_bytes[:chunk_size])
-        # for i in range(chunk_size, len(message), chunk_size):
         
     def decrypt_key(self, encrypted_key, master_key):
         decryptor = AES.new(bytes.fromhex(master_key), AES.MODE_ECB)
         key = decryptor.decrypt(bytes.fromhex(encrypted_key))
         return key.hex()
+    
+    # Function to display the alert box
+    def show_alert_box(self, message):
+        messagebox.showinfo("Alert", message)
         
 if __name__ == "__main__":
     root = tk.Tk()

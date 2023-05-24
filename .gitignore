@@ -396,3 +396,10 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+
+# Jupyter notebooks
+.ipynb_checkpoints
+
+# Testing files
+testing.ipynb
+users.json
