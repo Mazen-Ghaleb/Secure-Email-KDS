@@ -23,7 +23,6 @@ class ClientThread(threading.Thread):
         sender = messages[0]
         receiver = messages[1]
 
-        # TODO: Critical section
         km_a = key_mgr.register_user(sender)
         km_b = key_mgr.register_user(receiver)
         
@@ -33,7 +32,7 @@ class ClientThread(threading.Thread):
         
         self.csocket.send(f'{ks_a}\n{ks_b}'.encode())
         self.csocket.close()
-        # TODO: Critical section
+
         key_mgr.save_users()
         print ("Client at ", self.ip," disconnected...")
         
@@ -50,6 +49,7 @@ while True:
     tcpsock.listen(4)
     print ("Listening for incoming connections...")
     (clientsock, (ip, port)) = tcpsock.accept()
+    
     # Pass clientsock to the ClientThread thread object being created
     newthread = ClientThread(ip, port, clientsock)
     newthread.start()

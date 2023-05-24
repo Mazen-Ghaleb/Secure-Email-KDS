@@ -167,7 +167,12 @@ class App:
     def decryptMessage(self, encrypted_msg, key):
         decryptor = AES.new(bytes.fromhex(key), AES.MODE_ECB)
         decrypted_msg = decryptor.decrypt(bytes.fromhex(encrypted_msg))
-        decrypted_msg = unpad(decrypted_msg, AES.block_size)
+        try:
+            decrypted_msg = unpad(decrypted_msg, AES.block_size)
+        except:
+            self.show_alert_box("Incorrect master key")
+            print("Incorrect master key")
+            return
         decrypted_msg = decrypted_msg.decode()
         print("Decrypted Message:\n" + decrypted_msg)
         return decrypted_msg

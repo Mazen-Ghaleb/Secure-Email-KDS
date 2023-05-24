@@ -152,7 +152,7 @@ class App:
                     break
             f.close()
             if not found:
-                self.show_alert_box("Couldn't find master key for this email")
+                self.show_alert_box("Error getting km_a key, aborted sending email")
                 return
         except:
              print("Execption :", e)
