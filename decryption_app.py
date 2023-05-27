@@ -4,15 +4,13 @@ from tkinter import messagebox
 import smtplib
 from Crypto.Util.Padding import unpad
 from Crypto.Cipher import AES
-import json
 
 class App:
 
-    def __init__(self, root):
-        self.reciever=tk.StringVar()
+    def __init__(self, root): # Initialize the GUI
+        self.reciever=tk.StringVar() # Reciever Email
         
-        # Setting title
-        root.title("Secure Mail Decrypter")
+        root.title("Secure Mail Decrypter") # Setting title of the window
         
         # Setting window size
         width=600
@@ -25,6 +23,7 @@ class App:
         
         ft = tkFont.Font(family='Times',size=12)
         
+        # Email label
         label_email=tk.Label(root)
         label_email["font"] = ft
         label_email["fg"] = "#333333"
@@ -32,6 +31,7 @@ class App:
         label_email["text"] = "Email:"
         label_email.place(x=20,y=40,width=140,height=25)
         
+        # Password label
         label_password=tk.Label(root)
         label_password["font"] = ft
         label_password["fg"] = "#333333"
@@ -39,6 +39,7 @@ class App:
         label_password["text"] = "Password:"
         label_password.place(x=20,y=90,width=140,height=25)
         
+        # Encrypted Key label
         label_key=tk.Label(root)
         label_key["font"] = ft
         label_key["fg"] = "#333333"
@@ -46,6 +47,7 @@ class App:
         label_key["text"] = "Encrypted key:"
         label_key.place(x=20,y=140,width=140,height=25)
         
+        # Encrypted Message label
         label_Body=tk.Label(root)
         label_Body["font"] = ft
         label_Body["fg"] = "#333333"
@@ -53,6 +55,7 @@ class App:
         label_Body["text"] = "Encrypted Message:"
         label_Body.place(x=20,y=190,width=140,height=25)
         
+        # Decrypted Message label
         label_decryptedBody=tk.Label(root)
         label_decryptedBody["font"] = ft
         label_decryptedBody["fg"] = "#333333"
@@ -60,6 +63,7 @@ class App:
         label_decryptedBody["text"] = "Decrypted Message:"
         label_decryptedBody.place(x=20,y=300,width=140,height=25)
         
+        # Reciever Email entry
         self.email=tk.Entry(root, textvariable = self.reciever)
         self.email["borderwidth"] = "1px"
         self.email["font"] = ft
@@ -68,6 +72,7 @@ class App:
         self.email["text"] = "Email"
         self.email.place(x=160,y=40,width=400,height=30)
         
+        # Password entry
         self.email_password=tk.Entry(root, show="*")
         self.email_password["borderwidth"] = "1px"
         self.email_password["font"] = ft
@@ -76,6 +81,7 @@ class App:
         self.email_password["text"] = "Password"
         self.email_password.place(x=160,y=90,width=400,height=30)
         
+        # Encrypted Key entry
         self.key=tk.Entry(root)
         self.key["borderwidth"] = "1px"
         self.key["font"] = ft
@@ -84,18 +90,21 @@ class App:
         self.key["text"] = "To"
         self.key.place(x=160,y=140,width=400,height=30)
         
+        # Encrypted Message entry
         self.email_Body=tk.Text(root)
         self.email_Body["borderwidth"] = "1px"
         self.email_Body["font"] = ft
         self.email_Body["fg"] = "#333333"
         self.email_Body.place(x=160,y=190,width=400,height=101)
         
+        # Decrypted Message entry
         self.email_decryptedBody=tk.Text(root, state="disabled")
         self.email_decryptedBody["borderwidth"] = "1px"
         self.email_decryptedBody["font"] = ft
         self.email_decryptedBody["fg"] = "#333333"
         self.email_decryptedBody.place(x=160,y=300,width=400,height=101)
         
+        # Decrypt button
         button_Decrypt=tk.Button(root)
         button_Decrypt["bg"] = "#f0f0f0"
         button_Decrypt["font"] = ft
@@ -105,95 +114,93 @@ class App:
         button_Decrypt.place(x=300,y=460,width=70,height=25)
         button_Decrypt["command"] = self.button_Decrypt_command
         
-    def button_Decrypt_command(self):
-        self.reciever = self.email.get()
-        self.ks_b = self.key.get()
-        self.encrypted_message = self.email_Body.get("1.0","end")
-        att="Place holder for the key"
-        if (self.getDecryptionKey()):
-            self.setDecryptedMessage(self.decryptMessage(self.encrypted_message, self.ks))
-        else:
-            self.setDecryptedMessage("")
+    def button_Decrypt_command(self): # Decrypt button command
+        self.reciever = self.email.get() # Get the reciever email
+        self.ks_b = self.key.get() # Get the encrypted session key
+        self.encrypted_message = self.email_Body.get("1.0","end") # Get the encrypted message
+        att="Place holder for the key" # Place holder for the key
+        if (self.getDecryptionKey()): # If the master key is found
+            self.setDecryptedMessage(self.decryptMessage(self.encrypted_message, self.ks)) # Decrypt the message
+        else: # If the master key is not found
+            self.setDecryptedMessage("") # Set the decrypted message to empty
     
-    def getDecryptionKey(self) -> bool:
-        smtp_server = smtplib.SMTP("smtp-mail.outlook.com", port=587)
-        print("Connected")
-        smtp_server.starttls()
-        print("TLS successful")
+    def getDecryptionKey(self) -> bool: # Get the decryption key
+        """
+        Gets master key from the csv file if user successfully logs in and key is found in the csv file
+        """
         
-        try:
-            smtp_server.login(self.reciever, self.email_password.get())
-            print("Login successful")
-        except Exception as e:
-            print(e)
-            self.show_alert_box("Login failed, aborted decryption")
-            print("Login failed, aborted decryption")
-            return False
+        smtp_server = smtplib.SMTP("smtp-mail.outlook.com", port=587) # Connect to the smtp server
+        print("Connected") # Print connected
+        smtp_server.starttls() # Start TLS
+        print("TLS successful") # Print TLS successful
         
-        try:            
-            f = open("users.csv", "r")
-            found = False
-            for line in f.readlines():
-                username, master_key = line.strip().split(',')
-                if username == self.reciever:
-                    self.km_b = master_key
-                    found = True
-                    break
-            f.close()
-            if not found:
-                self.show_alert_box("Couldn't find master key for this email")
+        try : # Try to login
+            smtp_server.login(self.reciever, self.email_password.get()) # Login to the smtp server
+            print("Login successful") # Print login successful
+        except Exception as e: # If login fails
+            print(e) # Print the error
+            self.show_alert_box("Login failed, aborted decryption") # Show alert box
+            print("Login failed, aborted decryption") # Print login failed
+            return False 
+        
+        try :            
+            f = open("users.csv", "r") # Open the csv file
+            found = False # Set found to false
+            for line in f.readlines(): # For each line in the csv file
+                username, master_key = line.strip().split(',') # Get the username and master key
+                if username == self.reciever: # If the username matches the reciever email
+                    self.km_b = master_key # Set the master key
+                    found = True # Set found to true
+                    break # Break out of the loop
+            f.close() # Close the csv file
+            if not found: # If the master key is not found
+                self.show_alert_box("Couldn't find master key for this email") # Show alert box
                 return
-
-        except  Exception as e:
-             print("Execption :", e)
-             self.show_alert_box(e)
+        except  Exception as e: # If an exception occurs
+             print("Execption :", e) # Print the exception
+             self.show_alert_box(e) # Show alert box
              return
        
-        print(f"km_b: {self.km_b}")
-        print(f"ks_b: {self.ks_b}")
+        print(f"km_b: {self.km_b}") # Print the master key
+        print(f"ks_b: {self.ks_b}") # Print the encrypted session key
         
-        self.ks = self.decrypt_key(self.ks_b, self.km_b)
-        print(f"ks: {self.ks}")
+        self.ks = self.decrypt_key(self.ks_b, self.km_b) # Decrypt the session key
+        print(f"ks: {self.ks}") # Print the session key
         
-        smtp_server.quit()
-        return True
+        smtp_server.quit() # Quit the smtp server
+        return True 
       
-    def decrypt_key(self, encrypted_key, master_key):
-        decryptor = AES.new(bytes.fromhex(master_key), AES.MODE_ECB)
-        key = decryptor.decrypt(bytes.fromhex(encrypted_key))
-        return key.hex()
+    def decrypt_key(self, encrypted_key, master_key): # Function to decrypt the session key
+        decryptor = AES.new(bytes.fromhex(master_key), AES.MODE_ECB) # Create a decryptor
+        key = decryptor.decrypt(bytes.fromhex(encrypted_key)) # Decrypt the session key
+        return key.hex() # Return the session key as hex
     
-    def decryptMessage(self, encrypted_msg, key):
-        decryptor = AES.new(bytes.fromhex(key), AES.MODE_ECB)
-        decrypted_msg = decryptor.decrypt(bytes.fromhex(encrypted_msg))
-        try:
-            decrypted_msg = unpad(decrypted_msg, AES.block_size)
-        except:
-            self.show_alert_box("Incorrect master key")
-            print("Incorrect master key")
-            return ""
-        decrypted_msg = decrypted_msg.decode()
-        print("Decrypted Message:\n" + decrypted_msg)
-        return decrypted_msg
+    def decryptMessage(self, encrypted_msg, key): # Function to decrypt the message
+        decryptor = AES.new(bytes.fromhex(key), AES.MODE_ECB) # Create a decryptor
+        decrypted_msg = decryptor.decrypt(bytes.fromhex(encrypted_msg)) # Decrypt the message
+        try: # Try to unpad the message
+            decrypted_msg = unpad(decrypted_msg, AES.block_size) # Unpad the message
+        except: # If an exception occurs then the master key is incorrect
+            self.show_alert_box("Incorrect master key") # Show alert box
+            print("Incorrect master key") # Print incorrect master key
+            return "" # Return empty string
+        decrypted_msg = decrypted_msg.decode() # Decode the message
+        print("Decrypted Message:\n" + decrypted_msg) # Print the decrypted message
+        return decrypted_msg 
     
-    def setDecryptedMessage(self, decrypted_msg):
-        # Enable the widget to modify its content
-        self.email_decryptedBody.config(state="normal")
-
-        # Delete any existing text in the widget
-        self.email_decryptedBody.delete("1.0", "end")
-
-        # Insert the decrypted_msg text into the widget
-        self.email_decryptedBody.insert("1.0", decrypted_msg)
-
-        # Disable the widget to prevent further modifications
-        self.email_decryptedBody.config(state="disabled")
+    def setDecryptedMessage(self, decrypted_msg): # Function to set the decrypted message
+        self.email_decryptedBody.config(state="normal") # Enable the widget to modify its contents
+        self.email_decryptedBody.delete("1.0", "end") # Delete any existing text in the widget
+        self.email_decryptedBody.insert("1.0", decrypted_msg) # Insert the decrypted_msg text into the widget
+        self.email_decryptedBody.config(state="disabled") # Disable the widget to prevent further modifications
         
-    # Function to display the alert box
-    def show_alert_box(self, message):
-        messagebox.showinfo("Alert", message)
+    def show_alert_box(self, message): # Function to display the alert box
+        messagebox.showinfo("Alert", message) # Show the alert box
         
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = App(root)
-    root.mainloop()
+if __name__ == "__main__": # If the file is run directly
+    """
+    Main method.
+    """
+    root = tk.Tk() # Create a Tk object
+    app = App(root) # Create an App object
+    root.mainloop() # Run the main loop
